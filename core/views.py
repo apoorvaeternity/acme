@@ -26,15 +26,15 @@ class FileUploadView(View):
             csv_file_path = os.path.abspath(file_name)
             conn = connections['default']
             cur = conn.cursor()
+            db_table = Product._meta.db_table
             cur.execute("BEGIN")
             cur.execute("COPY" +
                         " {}(name,sku,description)".format(Product._meta.db_table) +
                         "FROM '" + csv_file_path + "' WITH DELIMITER ',' CSV HEADER ;")
             cur.execute("DELETE FROM"
-                        " {} a USING core_product b".format(Product._meta.db_table) +
+                        " {0} a USING {0} b".format(db_table) +
                         " WHERE a.id < b.id AND lower(a.sku) = lower(b.sku);")
-            cur.execute("UPDATE {} SET active = random() > 0.5 WHERE  active IS NULL;".format(
-                Product._meta.db_table))
+            cur.execute("UPDATE {} SET active = random() > 0.5 WHERE  active IS NULL;".format(db_table))
             cur.execute("COMMIT")
         except Exception as e:
             raise (e)
