@@ -6,14 +6,13 @@ from django.views import View
 from django.contrib import messages
 from django.conf import settings
 from django.db import connections
-from .forms import FileUploadForm
 from django.core.files.storage import FileSystemStorage
-from django.views.generic import TemplateView, ListView
-from .models import Product
+from django.views.generic import TemplateView
 from django_filters.views import FilterView
 from django_tables2.views import SingleTableMixin
-from django_filters.widgets import BooleanWidgets
-
+from django_filters.widgets import BooleanWidget
+from .forms import FileUploadForm
+from .models import Product
 
 # Create your views here.
 class FileUploadView(View):
