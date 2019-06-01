@@ -1,0 +1,23 @@
+{% load static %}
+{% load staticfiles %}
+{% load materializecss %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ACME</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+</head>
+<body>
+<h1 align="center">ACME</h1>
+<div style="margin:10% 20% 0% 20%" align="center">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form|materializecss }}
+        <input class="waves-effect waves-light btn" type="submit" value="Upload">
+    </form>
+</div>
+</body>
+</html>
