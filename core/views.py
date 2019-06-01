@@ -1,14 +1,18 @@
-from django.shortcuts import render
+import os
+import django_filters
+import django_tables2 as tables
+from django.shortcuts import render, redirect
 from django.views import View
-from django.http.response import HttpResponse
+from django.contrib import messages
+from django.conf import settings
 from django.db import connections
 from .forms import FileUploadForm
 from django.core.files.storage import FileSystemStorage
-import csv
+from django.views.generic import TemplateView, ListView
 from .models import Product
-from django.conf import settings
-import psycopg2
-import os
+from django_filters.views import FilterView
+from django_tables2.views import SingleTableMixin
+from django_filters.widgets import BooleanWidgets
 
 
 # Create your views here.
@@ -37,8 +41,49 @@ class FileUploadView(View):
             cur.execute("UPDATE {} SET active = random() > 0.5 WHERE  active IS NULL;".format(db_table))
             cur.execute("COMMIT")
         except Exception as e:
-            raise (e)
+            if settings.DEBUG:
+                raise (e)
+            else:
+                messages.error(request, "Could not add products to database.")
+                return redirect('core:product-upload')
         finally:
             if os.path.exists(csv_file_path):
                 os.remove(csv_file_path)
-        return HttpResponse("Uploaded")
+        messages.success(request, "Successfully added products to database.")
+        return redirect('core:home')
+
+
+class HomeView(TemplateView):
+    template_name = 'core/home.html'
+
+
+class ProductDeleteView(View):
+    def get(self, request, *args, **kwargs):
+        Product.objects.all().delete()
+        messages.success(request, "Successfully deleted all products.")
+        return redirect('core:home')
+
+
+class ProductTable(tables.Table):
+    class Meta:
+        model = Product
+        exclude = ('id',)
+
+
+class ProductFilter(django_filters.FilterSet):
+    active = django_filters.BooleanFilter(field_name='active', widget=BooleanWidget())
+
+    class Meta:
+        model = Product
+        fields = {
+            'sku': ['icontains'],
+            'name': ['icontains'],
+            'description': ['icontains']
+        }
+
+
+class ProductView(SingleTableMixin, FilterView):
+    table_class = ProductTable
+    model = Product
+    template_name = 'core/product.html'
+    filterset_class = ProductFilter

@@ -1,0 +1,20 @@
+{% extends 'core/base.html' %}
+{% block content %}
+    {% load render_table from django_tables2 %}
+    {% load bootstrap3 %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var elems = document.querySelectorAll('select');
+            var options = document.querySelectorAll('option');
+            var instances = M.FormSelect.init(elems, options);
+        });
+    </script>
+    {% if filter %}
+        <form action="" method="get" class="form form-inline">
+            {% bootstrap_form filter.form layout='inline' %}
+            {% bootstrap_button 'filter' %}
+        </form>
+    {% endif %}
+    {% render_table table 'django_tables2/bootstrap.html' %}
+
+{% endblock %}

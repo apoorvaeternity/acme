@@ -1,0 +1,8 @@
+{% extends 'core/base.html' %}
+{% block content %}
+    <div align="center">
+    <a class="waves-effect waves-light btn" href="{% url 'core:product' %}">View Products</a>
+    <a class="waves-effect waves-light btn" href="{% url 'core:product-upload' %}">Upload Products</a>
+    <a class="waves-effect waves-light btn" href="{% url 'core:product-delete' %}">Delete Products</a>
+    </div>
+{% endblock %}
