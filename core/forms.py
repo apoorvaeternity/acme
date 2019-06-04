@@ -1,6 +1,4 @@
-from django import forms
-from django.forms import Form
-
+from django.forms import Form, FileField, FileInput
 
 class FileUploadForm(Form):
-    file = forms.FileField(label='Select a CSV file', widget=forms.FileInput(attrs={'accept': '.csv'}))
+    file = FileField(label='Select a CSV file', widget=FileInput(attrs={'accept': '.csv'}))

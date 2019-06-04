@@ -1,4 +1,5 @@
 import os
+import boto3
 import django_filters
 import django_tables2 as tables
 from django.shortcuts import render, redirect
@@ -13,8 +14,16 @@ from django_tables2.views import SingleTableMixin
 from django_filters.widgets import BooleanWidget
 from .forms import FileUploadForm
 from .models import Product
+from uuid import uuid4
 
-# Create your views here.
+
+
+def get_file_name(filename):
+    ext = filename.split('.')[-1]
+    filename = "%s.%s" % (uuid4(), ext)
+    return filename
+
+
 class FileUploadView(View):
     form_class = FileUploadForm
     template_name = 'core/file_upload.html'
@@ -24,16 +33,37 @@ class FileUploadView(View):
 
     def post(self, request, *args, **kwargs):
         try:
-            fs = FileSystemStorage(file_permissions_mode=0o755)
-            file_name = fs.save(str(request.FILES['file'].name), request.FILES['file'])
-            csv_file_path = os.path.abspath(file_name)
+            if settings.DEBUG:
+                fs = FileSystemStorage(file_permissions_mode=0o755)
+                file_name = fs.save(str(request.FILES['file'].name), request.FILES['file'])
+                csv_file_path = os.path.abspath(file_name)
+            else:
+                session = boto3.Session(
+                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+                )
+                s3 = session.resource('s3')
+                key = 'csvs/' + get_file_name(request.FILES['file'].name)
+                s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME).put_object(
+                    Key=key,
+                    Body=request.FILES['file'])
+                s3Client = session.client('s3')
+                file_url= s3Client.generate_presigned_url('get_object', Params={'Bucket':settings.AWS_STORAGE_BUCKET_NAME, 'Key': key},
+                                                ExpiresIn=100)
             conn = connections['default']
             cur = conn.cursor()
             db_table = Product._meta.db_table
+
             cur.execute("BEGIN")
-            cur.execute("COPY" +
-                        " {}(name,sku,description)".format(Product._meta.db_table) +
-                        "FROM '" + csv_file_path + "' WITH DELIMITER ',' CSV HEADER ;")
+            if settings.DEBUG:
+                cur.execute("COPY"
+                            " {}(name,sku,description)".format(Product._meta.db_table) +
+                            "FROM %(csv_file_path)s WITH DELIMITER ',' CSV HEADER ;", {'csv_file_path': csv_file_path})
+            else:
+                cur.execute("COPY"
+                            " {}(name,sku,description)".format(Product._meta.db_table) +
+                            "FROM PROGRAM 'curl %s' WITH DELIMITER ',' CSV HEADER ;"%file_url)
+
             cur.execute("DELETE FROM"
                         " {0} a USING {0} b".format(db_table) +
                         " WHERE a.id < b.id AND lower(a.sku) = lower(b.sku);")
@@ -45,9 +75,6 @@ class FileUploadView(View):
             else:
                 messages.error(request, "Could not add products to database.")
                 return redirect('core:product-upload')
-        finally:
-            if os.path.exists(csv_file_path):
-                os.remove(csv_file_path)
         messages.success(request, "Successfully added products to database.")
         return redirect('core:home')
 
